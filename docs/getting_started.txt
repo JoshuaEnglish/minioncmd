@@ -4,4 +4,127 @@ Getting Started with MinionCmd
 We'll start by creating a shell for a simple Personal Information Manager. The
 goal will be to track Contacts and Calendar information. 
 
+First, we create some classes to manage the data in the background, which would
+represent parts of the real application::
 
+    import datetime
+    today = datetime.date.today()
+    tomorrow = today + datetime.timedelta(days=1)
+    nextweek = today + datetime.timedelta(days=6)
+    lastmonth = today - datetime.timedelta(days=33)
+    # there are only a few days a year this isn't really "last month"
+
+
+    class ContactManager:
+        """Underlying library implementing a bunch of useful ideas"""
+        def __init__(self):
+            self.contacts = {
+                "0": {"Name": "Douglas", "Birthday": nextweek},
+                "1": {"Name": "Isaac", "Birthday": lastmonth}
+                }
+
+        def list_contacts(self):
+            return self.contacts
+
+
+    class EventManager:
+        """Underlying library managing stuff"""
+        def __init__(self):
+            self.events = {
+                "0": {"text": "Send birthday card to Isaac",
+                    "date": lastmonth,
+                    "done": False},
+                "1": {"text": "Plan birthday party for Douglas",
+                    "date": today,
+                    "done": False},
+            }
+
+        def list_events(self):
+            return self.events
+            
+Now we create the Boss and Minion objects to run the CLI::
+
+    class PIMApp(minioncmd.BossCmd):
+        prompt = "pim>"
+        doc_leader = "PIM Help"
+        doc_header = "Top Level commands"
+        minion_header = "Subprograms"
+
+        def __init__(self, completekey='tab', stdin=None, stdout=None):
+            super().__init__(completekey, stdin, stdout)
+            self.contacts = ContactManager()
+            self.events = EventManager()
+
+
+    class ContactCmd(minioncmd.MinionCmd):
+        prompt = "contacts>"
+        doc_leader = "Contact Manager Help"
+
+        def do_list(self, text):
+            """Lists contacts"""
+            for cid in self.master.contacts.list_contacts():
+                contact = self.master.contacts.contacts[cid]
+                print(contact)
+
+
+    class EventCmd(minioncmd.MinionCmd):
+        prompt = "events>"
+        doc_leader = "Event Manager Help"
+
+        def do_list(self, text):
+            """Lists events"""
+            for eid in self.master.events.list_events():
+                event = self.master.events.events[eid]
+                print(event)
+
+Nothing fancy here, just a quick and dirty heirarchy and a couple of ``list``
+commands. Finally, create the instances and run them::
+
+    if __name__ == '__main__':
+        app = PIMApp()
+        contacts = ContactCmd('contacts', app)
+        events = EventCmd('events', app)
+
+        app.cmdloop()
+
+Here is some sample output::
+
+    examples>pim.py
+    pim>help
+    PIM Help
+    Subprograms
+    ===========
+    contacts  events
+
+    Program control commands
+    ========================
+    help  quit
+
+    pim>contacts help
+    Contact Manager Help
+    Local commands (type help <command>)
+    ====================================
+    list
+
+    Other minions (type <topic> help)
+    =================================
+    events
+
+    Program control commands
+    ========================
+    done  help  quit
+
+    pim>contacts list
+    {'Name': 'Douglas', 'Birthday': datetime.date(2019, 7, 18)}
+    {'Name': 'Isaac', 'Birthday': datetime.date(2019, 6, 9)}
+    pim>contacts
+    contacts>events
+    events>list
+    {'text': 'Send birthday card to Isaac', 'date': datetime.date(2019, 6, 9), 'done': False}
+    {'text': 'Plan birthday party for Douglas', 'date': datetime.date(2019, 7, 12), 'done': False}
+    events>done
+    pim>quit
+    
+Every minion can switch to any other minion, and the each minion can be return
+to the top level program with ``done``. Users can call ``quit`` in the top level
+or any minion to exit the whole program.
