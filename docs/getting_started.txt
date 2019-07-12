@@ -1,0 +1,7 @@
+Getting Started with MinionCmd
+==============================
+
+We'll start by creating a shell for a simple Personal Information Manager. The
+goal will be to track Contacts and Calendar information. 
+
+
