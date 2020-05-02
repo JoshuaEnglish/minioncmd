@@ -18,6 +18,16 @@ which enhances the basic :meth:`~ExtHelpCmd.do_help` method.
 import cmd
 import logging
 import time
+import argparse
+import functools
+
+
+def arg(f):
+    @functools.wraps
+    def wrap(f):
+        f(*args)
+    wrap._argparser = argparse.ArgumentParser()
+    return wrap
 
 
 class ExtHelpCmd(cmd.Cmd):
@@ -301,8 +311,10 @@ if __name__ == '__main__':
     class MarketCmd(MinionCmd):
         doc_leader = "Help for MarketCmd"
 
+        @arg()
         def do_hello(self, line):
-            print("Hello to '{}' from Market".format(line))
+            name = self._argparser.parse(line.split())
+            print(f"Hello to '{name}' from Market")
             self.master.cmdqueue.append('push hello from Market!')
 
     class LocalBully(BossCmd):
